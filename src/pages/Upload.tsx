@@ -7,17 +7,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload as UploadIcon, FileText, Search, Zap, CheckCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
+import { Zap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
-const ScoreItem = ({ label, score }: { label: string; score: number }) => {
-  const color = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-500' : 'text-red-500';
+const ScoreBar = ({ label, score }: { label: string; score: number }) => {
+  const barColor = score >= 80 ? "bg-success" : score >= 60 ? "bg-warning" : "bg-destructive";
+  const textColor = score >= 80 ? "text-success" : score >= 60 ? "text-warning" : "text-destructive";
   return (
-    <div className="p-4 rounded border bg-muted/30 shadow-sm">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{score}</p>
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-center">
+        <p className="text-sm font-medium">{label}</p>
+        <span className={`text-sm font-semibold tabular-nums ${textColor}`}>
+          {score}<span className="text-muted-foreground font-normal">/100</span>
+        </span>
+      </div>
+      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full ${barColor} rounded-full transition-all duration-700`}
+          style={{ width: `${score}%` }}
+        />
+      </div>
     </div>
   );
 };
@@ -29,7 +38,6 @@ export const Upload = () => {
   const [feedback, setFeedback] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const [scores, setScores] = useState<{
     alignment: number;
@@ -38,7 +46,6 @@ export const Upload = () => {
     improvement: number;
   } | null>(null);
 
-  // Mock colleges data
   const popularColleges = [
     "Harvard University",
     "Stanford University",
@@ -74,9 +81,7 @@ export const Upload = () => {
       reader.onload = (e) => {
         const content = e.target?.result as string;
         setEssay(content);
-        if (!title) {
-          setTitle(file.name.replace('.txt', ''));
-        }
+        if (!title) setTitle(file.name.replace(".txt", ""));
       };
       reader.readAsText(file);
     } else {
@@ -87,7 +92,6 @@ export const Upload = () => {
       });
     }
   };
-
 
   const handleAnalyze = async () => {
     if (!essay.trim() || !selectedCollege || !title.trim()) {
@@ -102,7 +106,6 @@ export const Upload = () => {
     setIsAnalyzing(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    const email = user?.email;
     if (!user) {
       toast({
         title: "Please log in first",
@@ -114,10 +117,7 @@ export const Upload = () => {
     }
 
     try {
-      // const res = await fetch("http://localhost:3001/analyze-essay", {
-      // const res = await fetch(`${import.meta.env.VITE_API_URL}/analyze-essay`, {
       const res = await fetch("https://essay-align.onrender.com/analyze-essay", {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -127,26 +127,24 @@ export const Upload = () => {
           user_id: user.id,
           college: {
             name: selectedCollege,
-            mission: `Mission of ${selectedCollege}`
-          }
+            mission: `Mission of ${selectedCollege}`,
+          },
         }),
       });
 
       const json = await res.json();
-
       if (!res.ok) throw new Error(json.error || "Analysis failed");
 
       setFeedback(json.feedback);
       setScores(json.scores);
 
       toast({
-        title: "Analysis Complete!",
-        description: "Your essay was successfully analyzed.",
+        title: "Analysis complete",
+        description: "Your essay has been analyzed.",
       });
-
     } catch (err: any) {
       toast({
-        title: "Error analyzing essay",
+        title: "Analysis failed",
         description: err.message || "Unexpected error.",
         variant: "destructive",
       });
@@ -155,197 +153,117 @@ export const Upload = () => {
     }
   };
 
-  const wordCount = essay.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const wordCount = essay.trim().split(/\s+/).filter((w) => w.length > 0).length;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-4">Upload Your Essay</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Upload your college essay and select your target college to get AI-powered insights and recommendations
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-10">
+          <h1 className="font-serif text-3xl lg:text-4xl font-medium mb-3">Analyze your essay</h1>
+          <p className="text-muted-foreground">
+            Select a college, paste your essay, and get targeted feedback in seconds.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upload Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Essay Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="title">Essay Title</Label>
-                  <Input
-                    id="title"
-                    placeholder="e.g., Why Stanford Essay, Personal Statement"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                </div>
+        <Card>
+          <CardContent className="pt-6 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">Essay title</Label>
+              <Input
+                id="title"
+                placeholder="e.g. Why Stanford, Personal Statement"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
 
-                {/* College Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="college">Target College</Label>
-                  <Select value={selectedCollege} onValueChange={setSelectedCollege}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select or search for a college" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {popularColleges.map((college) => (
-                        <SelectItem key={college} value={college}>
-                          {college}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    Don't see your college? We'll automatically find and analyze their information.
-                  </p>
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="college">Target college</Label>
+              <Select value={selectedCollege} onValueChange={setSelectedCollege}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a college" />
+                </SelectTrigger>
+                <SelectContent>
+                  {popularColleges.map((college) => (
+                    <SelectItem key={college} value={college}>
+                      {college}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* File Upload */}
-                <div className="space-y-2">
-                  <Label htmlFor="file">Upload File (Optional)</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="file"
-                      type="file"
-                      accept=".txt"
-                      onChange={handleFileUpload}
-                      className="file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                    />
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <UploadIcon className="h-4 w-4" />
-                      .txt files only
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="file">
+                Upload file{" "}
+                <span className="text-muted-foreground font-normal">(optional — .txt only)</span>
+              </Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".txt"
+                onChange={handleFileUpload}
+                className="file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-secondary file:text-foreground hover:file:bg-secondary/80 cursor-pointer"
+              />
+            </div>
 
-                {/* Essay Text */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="essay">Essay Text</Label>
-                    <Badge variant="outline">{wordCount} words</Badge>
-                  </div>
-                  <Textarea
-                    id="essay"
-                    placeholder="Paste your essay here or upload a file above..."
-                    value={essay}
-                    onChange={(e) => setEssay(e.target.value)}
-                    className="min-h-[300px] resize-none"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Recommended: 250-650 words for most college essays
-                  </p>
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="essay">Essay text</Label>
+                <Badge variant="outline" className="font-normal">{wordCount} words</Badge>
+              </div>
+              <Textarea
+                id="essay"
+                placeholder="Paste your essay here..."
+                value={essay}
+                onChange={(e) => setEssay(e.target.value)}
+                className="min-h-[280px] resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Most college essays are 250–650 words. Include specific examples and personal stories for the best analysis.
+              </p>
+            </div>
 
-                {/* Analyze Button */}
-                <Button
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Zap className="h-5 w-5 animate-pulse" />
-                      Analyzing Essay...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-5 w-5" />
-                      Analyze Essay
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleAnalyze}
+              disabled={isAnalyzing}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Zap className="h-4 w-4 animate-pulse" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  Analyze essay
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
-            {feedback && scores && (
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Essay Analysis Scorecard</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <ScoreItem label="Mission Alignment" score={scores.alignment} />
-                    <ScoreItem label="Values Match" score={scores.values} />
-                    <ScoreItem label="Tone & Voice" score={scores.tone} />
-                    <ScoreItem label="Improvement Potential" score={scores.improvement} />
-                  </div>
-                  <div className="mt-4">
-                    <h4 className="font-medium">Summary</h4>
-                    <p className="text-muted-foreground whitespace-pre-line">{feedback}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Analysis Preview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">What You'll Get</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Mission Alignment Score</p>
-                    <p className="text-xs text-muted-foreground">How well your essay matches the college's mission</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Values Assessment</p>
-                    <p className="text-xs text-muted-foreground">Analysis of how you demonstrate core values</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Improvement Suggestions</p>
-                    <p className="text-xs text-muted-foreground">Specific recommendations to strengthen your essay</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Tone & Voice Analysis</p>
-                    <p className="text-xs text-muted-foreground">Whether your writing style fits the college culture</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Tips */}
-            <Card className="bg-accent/5 border-accent/20">
-              <CardHeader>
-                <CardTitle className="text-lg text-accent">💡 Pro Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p>• Include specific examples and personal stories</p>
-                <p>• Research the college's recent initiatives and values</p>
-                <p>• Show, don't tell - use concrete examples</p>
-                <p>• Connect your experiences to future goals</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        {feedback && scores && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="font-serif font-medium text-xl">Analysis results</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <div className="space-y-4">
+                <ScoreBar label="Mission alignment" score={scores.alignment} />
+                <ScoreBar label="Values match" score={scores.values} />
+                <ScoreBar label="Tone & voice" score={scores.tone} />
+                <ScoreBar label="Improvement potential" score={scores.improvement} />
+              </div>
+              <div className="pt-2 border-t border-border">
+                <p className="text-sm font-medium mb-3">Feedback</p>
+                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{feedback}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

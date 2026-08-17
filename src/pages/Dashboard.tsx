@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Plus, FileText, BarChart3, Calendar, Target, TrendingUp } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
 
 export const Dashboard = () => {
   const [totalEssays, setTotalEssays] = useState(0);
@@ -19,24 +17,20 @@ export const Dashboard = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('essays')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .from("essays")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
         .limit(3);
 
       if (!error) setEssays(data);
     };
-
     fetchEssays();
   }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: essays, error } = await supabase
@@ -48,155 +42,93 @@ export const Dashboard = () => {
 
       const scores = essays.map((e) => Number(e.score)).filter((s) => !isNaN(s));
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-
       const unique = new Set(essays.map((e) => e.college_name)).size;
 
       setTotalEssays(essays.length);
       setAverageScore(Number(avg.toFixed(1)));
       setUniqueColleges(unique);
     };
-
     fetchStats();
   }, []);
 
-
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "bg-success";
-    if (score >= 60) return "bg-warning";
-    return "bg-destructive";
-  };
-
-  const getStatusBadge = (essay: any) => {
-    if (essay.score && Number(essay.score) > 0) {
-      return <Badge variant="secondary">Analyzed</Badge>;
-    } else {
-      return <Badge variant="outline">Processing</Badge>;
-    }
+    if (score >= 80) return "text-success";
+    if (score >= 60) return "text-warning";
+    return "text-destructive";
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Track your essay analyses and improve your college applications
-          </p>
-        </div>
-        <Button variant="hero" asChild>
-          <Link to="/upload">
-            <Plus className="h-4 w-4" />
-            New Analysis
-          </Link>
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Essays</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalEssays}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageScore}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unique Colleges</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{uniqueColleges}</div>
-            <p className="text-xs text-muted-foreground">
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Essays */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Recent Essays
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {essays.map((essay) => (
-              <div
-                key={essay.id}
-                className="flex flex-col lg:flex-row lg:items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold">{essay.title}</h3>
-                    {getStatusBadge(essay)}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Target: {essay.college}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {essay.feedback}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  {essay.score > 0 && (
-                    <div className="text-center">
-                      <div className={`w-12 h-12 rounded-full ${getScoreColor(essay.score)} flex items-center justify-center text-white font-bold`}>
-                        {essay.score}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">Score</p>
-                    </div>
-                  )}
-
-                  <div className="text-center">
-                    <p className="text-sm font-medium">{essay.date}</p>
-                    <div className="flex gap-2 mt-2">
-                      {/* <Button variant="outline" size="sm">
-                        View
-                      </Button> */}
-                      {essay === "analyzed" && (
-                        <Button variant="ghost" size="sm">
-                          <TrendingUp className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-12">
+          <div>
+            <h1 className="font-serif text-3xl lg:text-4xl font-medium mb-1">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Your essay analyses and progress</p>
           </div>
+          <Button asChild>
+            <Link to="/upload">
+              <Plus className="h-4 w-4" />
+              New analysis
+            </Link>
+          </Button>
+        </div>
 
-          {essays.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No essays yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Upload your first essay to get started with AI analysis
+        {/* Stats strip */}
+        <div className="grid grid-cols-3 gap-px bg-border rounded-lg overflow-hidden mb-10">
+          {[
+            { label: "Essays analyzed", value: totalEssays },
+            { label: "Average score", value: averageScore || "—" },
+            { label: "Colleges targeted", value: uniqueColleges },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card px-6 py-5">
+              <p className="text-2xl font-semibold tabular-nums mb-1">{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent essays */}
+        <div>
+          <h2 className="font-serif text-xl font-medium mb-4">Recent essays</h2>
+
+          {essays.length > 0 ? (
+            <div className="space-y-2">
+              {essays.map((essay) => (
+                <div
+                  key={essay.id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0 mr-4">
+                    <p className="font-medium text-sm truncate">{essay.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{essay.college}</p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {essay.score > 0 && (
+                      <span className={`text-sm font-semibold tabular-nums ${getScoreColor(essay.score)}`}>
+                        {essay.score}
+                      </span>
+                    )}
+                    <Badge variant={essay.score > 0 ? "secondary" : "outline"} className="text-xs">
+                      {essay.score > 0 ? "Analyzed" : "Processing"}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 border border-dashed border-border rounded-lg">
+              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-medium mb-1">No essays yet</p>
+              <p className="text-sm text-muted-foreground mb-5">
+                Upload your first essay to get AI analysis
               </p>
-              <Button variant="default" asChild>
-                <Link to="/upload">Upload Essay</Link>
+              <Button asChild>
+                <Link to="/upload">Upload essay</Link>
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
